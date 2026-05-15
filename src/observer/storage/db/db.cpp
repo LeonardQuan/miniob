@@ -176,6 +176,48 @@ RC Db::create_table(const char *table_name, span<const AttrInfoSqlNode> attribut
   return RC::SUCCESS;
 }
 
+RC Db::drop_table(const char *table_name)
+{
+  if (common::is_blank(table_name)) {
+    LOG_WARN("invalid argument. table_name=%p", table_name);
+    return RC::INVALID_ARGUMENT;
+  }
+
+  auto iter = opened_tables_.find(table_name);
+  if (iter == opened_tables_.end()) {
+    LOG_WARN("table does not exist. table_name=%s", table_name);
+    return RC::SCHEMA_TABLE_NOT_EXIST;
+  }
+
+  Table *table = iter->second;
+  vector<string> files_to_remove;
+  files_to_remove.emplace_back(table_meta_file(path_.c_str(), table_name));
+  files_to_remove.emplace_back(table_data_file(path_.c_str(), table_name));
+  files_to_remove.emplace_back(table_lob_file(path_.c_str(), table_name));
+  for (int i = 0; i < table->table_meta().index_num(); i++) {
+    const IndexMeta *index_meta = table->table_meta().index(i);
+    if (index_meta != nullptr) {
+      files_to_remove.emplace_back(table_index_file(path_.c_str(), table_name, index_meta->name()));
+    }
+  }
+
+  opened_tables_.erase(iter);
+  delete table;
+
+  for (const string &file : files_to_remove) {
+    std::error_code ec;
+    filesystem::remove(file, ec);
+    if (ec) {
+      LOG_ERROR("failed to remove file when dropping table. table=%s, file=%s, error=%s",
+          table_name, file.c_str(), ec.message().c_str());
+      return RC::FILE_REMOVE;
+    }
+  }
+
+  LOG_INFO("drop table success. table name=%s", table_name);
+  return RC::SUCCESS;
+}
+
 Table *Db::find_table(const char *table_name) const
 {
   unordered_map<string, Table *>::const_iterator iter = opened_tables_.find(table_name);

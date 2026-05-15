@@ -22,6 +22,8 @@ def create_test_cases() -> TestCase:
   check_drop_table_group.add_runtime_dml_instruction("insert into Drop_table_3 values(1,'OB');")
   check_drop_table_group.add_sort_runtime_dql_instruction('select * from Drop_table_3;')
   check_drop_table_group.add_runtime_ddl_instruction('drop table Drop_table_3;')
+  check_drop_table_group.add_runtime_ddl_instruction('desc Drop_table_3;')
+  check_drop_table_group.add_sort_runtime_dql_instruction('show tables;')
   check_drop_table_group.add_runtime_dml_instruction("insert into Drop_table_3 values(2,'OC');")
   check_drop_table_group.add_sort_runtime_dql_instruction('select * from Drop_table_3;')
   check_drop_table_group.add_runtime_dml_instruction('delete from Drop_table_3 where id = 3;')
